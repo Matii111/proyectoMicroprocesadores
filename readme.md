@@ -71,6 +71,10 @@ UPLOAD_TIME= <Tiempo de espera para la carga en milisegundos>
 
 LOAD_INFO= <Tiempo de actualizacion de rastreo de los datos de los sensores>
 ```
+# Resultados de entrenamiento
+![training_metrics](https://github.com/user-attachments/assets/c85b7119-ae2f-48f6-83dd-b459691c6879)
+
+
 # TODO
 - ~~Al recibir los datos con el backend crear script para enviarlos cada 24 horas a alguna base de datos o metodo de respaldo.~~
 - ~~Separar datos recibidos para dos interfaces distintas, separando por arduinos 1 y 2.~~
