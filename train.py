@@ -10,6 +10,7 @@ from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 import os
 from tensorflow.keras.losses import MeanSquaredError
 from sklearn.preprocessing import MinMaxScaler
+import matplotlib.pyplot as plt  # Importación necesaria para gráficos
 
 # Cargar archivo JSON y convertirlo en un DataFrame
 json_file = 'datos.csv'
@@ -135,3 +136,40 @@ print("\nValores Reales:")
 print(y_test)
 print("\nPredicciones:")
 print(predictions.flatten())
+
+# ----- Agregado para graficar -----
+
+# Extraer los datos de pérdida y MAE del historial
+train_loss = history.history['loss']
+val_loss = history.history['val_loss']
+train_mae = history.history['mae']
+val_mae = history.history['val_mae']
+
+# Crear un rango de epochs
+epochs = range(1, len(train_loss) + 1)
+
+# Crear figura para las gráficas
+plt.figure(figsize=(12, 6))
+
+# Graficar la pérdida
+plt.subplot(1, 2, 1)
+plt.plot(epochs, train_loss, 'b-', label='Pérdida de entrenamiento')
+plt.plot(epochs, val_loss, 'r--', label='Pérdida de validación')
+plt.title('Pérdida durante el entrenamiento')
+plt.xlabel('Épocas')
+plt.ylabel('Pérdida (MSE)')
+plt.legend()
+
+# Graficar el MAE
+plt.subplot(1, 2, 2)
+plt.plot(epochs, train_mae, 'b-', label='MAE de entrenamiento')
+plt.plot(epochs, val_mae, 'r--', label='MAE de validación')
+plt.title('MAE durante el entrenamiento')
+plt.xlabel('Épocas')
+plt.ylabel('Mean Absolute Error')
+plt.legend()
+
+# Ajustar diseño y guardar la imagen
+plt.tight_layout()
+plt.savefig('training_metrics.png')  # Guardar como imagen
+print("Gráfico guardado como 'training_metrics.png'")
