@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estación Meteorológica</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <script src="/env.js"></script>
+    <script>
+        const jsonData = 'http://IP_HOST:BACKEND_PORT/data.json';
+        const savedDataArray = [];
+
+
+
+        //download data from db
+        async function downloadBackup() {
+            const response = await fetch('/api/DataSave', {
+                method: 'GET',
+            });
+
+            try {
+                if (!response.ok) {
+                    throw new Error(`Error al descargar datos: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const keys = Object.keys(data[0]);
+                const csvContent = [
+                    keys.join(','),
+                    ...data.map(item => keys.map(key => item[key]).join(','))
+                ].join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+
+                const downloadLink = document.createElement('a');
+                downloadLink.href = URL.createObjectURL(blob);
+                downloadLink.download = 'backup.csv';
+
+                downloadLink.click();
+                URL.revokeObjectURL(downloadLink.href);
+
+                console.log('Documento descargado');
+
+            } catch (error) {
+                console.error('Error al descargar: ', error);
+            }
+        }
+        //download local data
+        function downloadLocal() {
+            const savedData = localStorage.getItem('savedData');
+            const parsedData = JSON.parse(savedData);
+            const stringData = parsedData.map(item =>
+                `${item.timestamp},${item.id},${item.device},${item.temperatura},${item.co2},${item.humedad},${item.uvs},${item.luminica}`
+            ).join('\n');
+
+            const keys = Object.keys(parsedData[0]);
+            const csvContent = [
+                keys.join(','),
+                ...parsedData.map(item => keys.map(key => item[key]).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const downloadLink = document.createElement('a');
+            downloadLink.href = URL.createObjectURL(blob);
+            downloadLink.download = 'data_local.csv';
+            downloadLink.click();
+            URL.revokeObjectURL(downloadLink.href);
+
+            console.log('Documento descargado');
+        }
+        //find data from json
+        async function fetchData() {
+            try {
+                const response = await fetch(jsonData);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const dataString = await response.text();
+                const data = JSON.parse(dataString);
+                updateUI(data);
+                saveData(data);
+                saveDataToLocalStorage();
+
+            } catch (error) {
+                console.error('Error al obtener datos:', error);
+            }
+        }
+        //saves all data as arrays
+        function saveData(data) {
+            const combinedData = [...data.COM5, ...data.COM6];
+            combinedData.forEach(dataIndex => savedDataArray.push({
+                timestamp: new Date().toISOString(),
+                ...dataIndex
+            }));
+        }
+        // transfers data to local storage
+        function saveDataToLocalStorage() {
+            if (savedDataArray.length === 0) {
+                console.warn('No hay datos para guardar');
+                return;
+            }
+            localStorage.setItem('savedData', JSON.stringify(savedDataArray));
+            console.log('Datos guardados en localStorage');
+            updateDisplay();
+        }
+        //shows updated data on display
+        function updateDisplay() {
+            const displayElement = document.getElementById('saved-content');
+            const savedData = localStorage.getItem('savedData');
+            displayElement.textContent = savedData ? JSON.stringify(JSON.parse(savedData), null, 2) : 'No hay datos disponibles aún.';
+        }
+        //upload data to db
+        async function uploadDataToServer() {
+            const savedData = localStorage.getItem('savedData');
+            if (!savedData) {
+                console.warn('No hay datos para enviar al servidor');
+                return;
+            }
+            try {
+                const parsedData = JSON.parse(savedData);
+                const stringData = parsedData.map(item =>
+                    `${item.timestamp},${item.id},${item.device},${item.temperatura},${item.co2},${item.humedad},${item.uvs},${item.luminica}`
+                ).join('\n');
+
+                const response = await fetch('/api/DataSave', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(parsedData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error al enviar datos: ${response.status}`);
+                }
+                const result = await response.json();
+                console.log('Datos subidos exitosamente:', result);
+            } catch (error) {
+                console.error('Error al subir datos:', error);
+            }
+        }
+        //updates data showed in UI
+        function updateUI(data) {
+            if (data.endsWith('.json')) {
+                data.forEach(index => {
+                    document.getElementById('dispositivo1').textContent = `Arduino Uno: ${index.device || 'N/A'}`;
+                    document.getElementById('temperatura1').textContent = `Temperatura: ${index.temperatura || 'N/A'} °C`;
+                    document.getElementById('nivelCO21').textContent = `Nivel de CO2: ${index.co2 || 'N/A'} ppm`;
+                    document.getElementById('nivelHumedad1').textContent = `Nivel de Humedad: ${index.humedad || 'N/A'} %`;
+                    document.getElementById('nivelRayosUV1').textContent = `Nivel de Rayos UV: ${index.uvs || 'N/A'}`;
+                    document.getElementById('intensidadLuminica1').textContent = `Intensidad Luminica: ${index.luminica || 'N/A'} lux`;
+                });
+            }
+
+            else {
+                document.getElementById('temperaturaPred').textContent = `Temperatura: ${data || 'N/A'} °C`;
+            }
+        }
+
+        //script to download predictions
+        async function predict() {
+            await fetch('/predict')
+                .then(response => response.text())
+                .then(data => {
+                    console.log(data);
+                    updateUI(data);
+                })
+                .catch(error => console.error('Error al cargar el archivo:', error));
+        }
+
+        async function initialize() {
+            await fetchData();
+            await predict();
+        }
+
+        //confirm before close session
+        window.onbeforeunload = function (event) {
+            const message = "Seguro que quieres salir?";
+            event.returnValue = message;
+            return message;
+        };
+        //clear old localstore files
+        window.onload = function () {
+            localStorage.clear();
+            console.log('localStorage limpiado');
+        };
+
+
+        setInterval(fetchData, LOAD_INFO);
+        setInterval(uploadDataToServer, UPLOAD_TIME);
+
+        initialize();
+
+    </script>
+    <div>
+        <p class="main-title">Estación Meteorológica</p>
+        <div class="arduino-container">
+            <div class="left-container" id="app1">
+                <div>
+                    <p id="dispositivo1">Conectando dispositivo...</p>
+                    <p id="temperatura1">
+                        <img src=media/loadingIcon.gif alt="loading...">
+                        <img class="tempImgs" src=media/tempMed.svg alt="niceTemp">
+                        <img class="tempImgs" src=media/tempLow.svg alt="lowTemp">
+                        <img class="tempImgs" src=media/tempHigh.svg alt="highTemp">
+                    </p>
+                    <p id="nivelCO21">
+                        <img src=media/loadingIcon.gif alt="loading..."> PPM
+                        <img class="co2Imgs" src=media/ppmNormal.svg alt="ppmNormal">
+                        <img class="co2Imgs" src=media/ppmRegular.svg alt="ppmRegular">
+                        <img class="co2Imgs" src=media/ppmBad.svg alt="ppmBad">
+                    </p>
+                    <p id="nivelHumedad1"><img src=media/loadingIcon.gif alt="loading..."></p>
+                    <div class="uvContainer">
+                        <p id="nivelRayosUV1">
+                            <img src=media/loadingIcon.gif alt="loading...">UV
+                        <p>
+                            <img class="uvImgs" src=media/dotGreen.svg alt="dotGreen">
+                            <img class="uvImgs" src=media/dotYellow.svg alt="dotYellow">
+                            <img class="uvImgs" src=media/dotOrange.svg alt="dotOrange">
+                            <img class="uvImgs" src=media/dotRed.svg alt="dotRed">
+                            <img class="uvImgs" src=media/dotPurple.svg alt="dotPurple">
+                        </p>
+                        </p>
+                    </div>
+                    <p id="intensidadLuminica1">
+                        <img src=media/loadingIcon.gif alt="loading...">LUX
+                        <img class="lightImgs" src=media/luxLow.svg alt="luxLow">
+                        <img class="lightImgs" src=media/luxHigh.svg alt="luxHigh">
+                    </p>
+                </div>
+                <div>
+                    <p id="dispositivoPred">Pronostico</p>
+                    <p id="temperatura1"><img src=media/loadingIcon.gif alt="loading..."></p>
+                    <p id="nivelCO21"><img src=media/loadingIcon.gif alt="loading..."> PPM</p>
+                    <p id="nivelHumedad1"><img src=media/loadingIcon.gif alt="loading..."></p>
+                    <p id="nivelRayosUV1"><img src=media/loadingIcon.gif alt="loading...">UV</p>
+                    <p id="intensidadLuminica1"><img src=media/loadingIcon.gif alt="loading...">LUX</p>
+                </div>
+            </div>
+            <div id="data-display" class="data-container">
+                <p>Datos Guardados</p>
+                <hr />
+                <div>
+                    <code id="saved-content" class="json-data">No hay datos disponibles aún.</code>
+                    <div class="buttons-container">
+                        <button onclick="downloadBackup()" title="Descarga los datos desde el backup">
+                            <img src=media/downloadBackup.svg alt="Download from DB">
+                        </button>
+                        <button onclick="downloadLocal()" title="Descarga los datos actuales">
+                            <img src="media/downloadLocal.svg" alt="Download from LocalStorage">
+                        </button>
+                        <button onclick="uploadDataToServer()" title="Carga los datos a la DB">
+                            <img src="media/uploadData.svg" alt="Upload to DB">
+                        </button>
+                    </div>
+                </div>
+
+</body>
+
+</html>
