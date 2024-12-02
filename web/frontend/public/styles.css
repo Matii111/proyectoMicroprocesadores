@@ -6,7 +6,7 @@
 */
 body {
     font-family: "Poppins", sans-serif;
-    background-image: url(https://github.com/desconocido3322/proyecto_meteologica/blob/test-webpage/webpage/media/satellite.jpg?raw=true);
+    background-image: url(https://raw.githubusercontent.com/Matii111/proyectoMicroprocesadores/refs/heads/master/imgs/2d35c3f3-28c2-4c10-8c59-0544cf914619.png);
     margin: 0;
     padding: 0;
     display: flex;
@@ -17,6 +17,7 @@ body {
     background-size: cover;
     position: relative;
     background-position: center;
+    backdrop-filter: brightness(0.7);
 }
 
 p,
@@ -83,7 +84,7 @@ h1 {
 }
 
 .uvContainer>p {
-color: #ffffff;
+    color: #ffffff;
     font-size: 1.3rem;
     display: flex;
     align-items: center;
@@ -123,7 +124,7 @@ color: #ffffff;
 .left-container>div>p>img {
     width: 3rem;
     width: 3rem;
-    padding-right: 5rem;
+    padding-right: 2rem;
 }
 
 .json-data {
